@@ -43,6 +43,7 @@
       margin-bottom: 15px;
     }
     button:active { transform: scale(0.98); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
     .google-btn {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -167,12 +168,12 @@
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore.js";
 
     const firebaseConfig = {
-      apiKey: "AIzaSyBhiWCsuNxDfyDIE7wGJcEAimZMi2Hpd9g",
-      authDomain: "ebook-df952.firebaseapp.com",
-      projectId: "ebook-df952",
-      storageBucket: "ebook-df952.firebasestorage.app",
-      messagingSenderId: "165157965441",
-      appId: "1:165157965441:web:5e2d9cdb7dfcdf70de8780"
+      apiKey: "AIzaSyD8-H0poQ8JrUt_gK5CQMxX32oLQzJW4to",
+      authDomain: "crossword-ebook.firebaseapp.com",
+      projectId: "crossword-ebook",
+      storageBucket: "crossword-ebook.firebasestorage.app",
+      messagingSenderId: "854470093077",
+      appId: "1:854470093077:web:5e4eb780da42a112aaa11c"
     };
 
     const app = initializeApp(firebaseConfig);
@@ -265,27 +266,32 @@
       utrError.textContent = '';
 
       try {
-        // Attempt to read UTR document from Firestore
+        // Document ID = UTR number, field "email" = gmail linked to that payment
         const docRef = doc(db, 'utrs', utr);
         const docSnap = await getDoc(docRef);
 
-        // If document exists and rules allow, we get data. Else catch block handles.
-        if (docSnap.exists()) {
-          // Success
-          pdfFrame.src = PDF_FILE;
-          pdfContainer.classList.remove('hidden');
-          utrSection.classList.add('hidden');
-        } else {
+        if (!docSnap.exists()) {
           utrError.textContent = 'Invalid UTR.';
+        } else {
+          const data = docSnap.data();
+          const linkedEmail = (data.email || '').trim().toLowerCase();
+          const currentEmail = (user.email || '').trim().toLowerCase();
+
+          if (linkedEmail && linkedEmail === currentEmail) {
+            // Match confirmed — this UTR belongs to the logged-in user
+            pdfFrame.src = PDF_FILE;
+            pdfContainer.classList.remove('hidden');
+            utrSection.classList.add('hidden');
+          } else {
+            utrError.textContent = 'This UTR is not linked to your account.';
+          }
         }
       } catch (error) {
         console.error(error);
-        // Show alert for debugging
-        alert('Firestore Error: ' + (error.message || error));
         if (error.code === 'permission-denied') {
           utrError.textContent = 'This UTR is not linked to your account.';
         } else {
-          utrError.textContent = 'Error: ' + error.message;
+          utrError.textContent = 'Something went wrong. Try again.';
         }
       } finally {
         verifyUtrBtn.disabled = false;
