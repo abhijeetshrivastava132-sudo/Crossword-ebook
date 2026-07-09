@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ebook Portal</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 450px;
+      padding: 40px 30px;
+      text-align: center;
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+      font-size: 28px;
+    }
+
+    h2 {
+      color: #555;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .subtitle {
+      color: #777;
+      margin-bottom: 25px;
+      font-size: 14px;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.1s;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    .google-btn {
+      background: #ffffff;
+      border: 1px solid #dadce0;
+      color: #3c4043;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .google-btn:hover {
+      background: #f8f9fa;
+    }
+
+    .google-btn img {
+      width: 20px;
+      height: 20px;
+    }
+
+    .primary-btn {
+      background: #667eea;
+      color: white;
+    }
+
+    .primary-btn:hover {
+      background: #5a6fd6;
+    }
+
+    .logout-btn {
+      background: #e0e0e0;
+      color: #333;
+      margin-top: 20px;
+    }
+
+    .logout-btn:hover {
+      background: #bdbdbd;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 15px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 16px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    input:focus {
+      border-color: #667eea;
+    }
+
+    .error-message {
+      color: #e74c3c;
+      margin: 10px 0;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading-spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 0.8s linear infinite;
+      margin: 10px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    iframe {
+      width: 100%;
+      height: 500px;
+      border: none;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin-top: 20px;
+    }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .pdf-container {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" id="app">
+    <!-- Login Screen -->
+    <div id="login-screen">
+      <h1>📚 Ebook Portal</h1>
+      <p class="subtitle">Access your purchased ebooks securely</p>
+      <button class="google-btn" id="google-login-btn">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+        Sign in with Google
+      </button>
+      <div id="login-error" class="error-message"></div>
+    </div>
+
+    <!-- Dashboard / Homepage Screen -->
+    <div id="dashboard-screen" class="hidden">
+      <div class="user-info">
+        <img id="user-avatar" class="user-avatar" src="" alt="User">
+        <span id="user-name"></span>
+      </div>
+      <h2>Welcome!</h2>
+      <p class="subtitle">Your purchased ebook is ready</p>
+
+      <!-- "Open Ebook" button (shown initially) -->
+      <button class="primary-btn" id="open-ebook-btn">📖 Open Ebook</button>
+
+      <!-- UTR Section (hidden initially) -->
+      <div id="utr-section" class="hidden">
+        <input type="text" id="utr-input" placeholder="Enter your UTR number">
+        <div id="utr-error" class="error-message"></div>
+        <button class="primary-btn" id="verify-utr-btn">
+          <span id="verify-btn-text">Verify & Open</span>
+          <div id="verify-spinner" class="loading-spinner hidden"></div>
+        </button>
+      </div>
+
+      <!-- PDF Viewer (hidden) -->
+      <div id="pdf-container" class="pdf-container hidden">
+        <iframe id="pdf-frame"></iframe>
+      </div>
+
+      <button class="logout-btn" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <!-- Modular Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithPopup, 
+      GoogleAuthProvider, 
+      onAuthStateChanged, 
+      signOut 
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
+    import { 
+      getFunctions, 
+      httpsCallable 
+    } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-functions.js";
+
+    // ================== YOUR FIREBASE CONFIG ==================
+    const firebaseConfig = {
+      apiKey: "AIzaSyBhiWCsuNxDfyDIE7wGJcEAimZMi2Hpd9g",
+      authDomain: "ebook-df952.firebaseapp.com",
+      projectId: "ebook-df952",
+      storageBucket: "ebook-df952.firebasestorage.app",
+      messagingSenderId: "165157965441",
+      appId: "1:165157965441:web:5e2d9cdb7dfcdf70de8780"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const functions = getFunctions(app);
+
+    // UI Elements
+    const loginScreen = document.getElementById('login-screen');
+    const dashboardScreen = document.getElementById('dashboard-screen');
+    const googleLoginBtn = document.getElementById('google-login-btn');
+    const loginError = document.getElementById('login-error');
+    const userNameSpan = document.getElementById('user-name');
+    const userAvatar = document.getElementById('user-avatar');
+    const openEbookBtn = document.getElementById('open-ebook-btn');
+    const utrSection = document.getElementById('utr-section');
+    const utrInput = document.getElementById('utr-input');
+    const verifyUtrBtn = document.getElementById('verify-utr-btn');
+    const verifyBtnText = document.getElementById('verify-btn-text');
+    const verifySpinner = document.getElementById('verify-spinner');
+    const utrError = document.getElementById('utr-error');
+    const pdfContainer = document.getElementById('pdf-container');
+    const pdfFrame = document.getElementById('pdf-frame');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Helper: Toggle loading state
+    function setLoading(button, spinner, textElement, isLoading) {
+      if (isLoading) {
+        button.disabled = true;
+        textElement.classList.add('hidden');
+        spinner.classList.remove('hidden');
+      } else {
+        button.disabled = false;
+        textElement.classList.remove('hidden');
+        spinner.classList.add('hidden');
+      }
+    }
+
+    // Auth state observer
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        loginScreen.classList.add('hidden');
+        dashboardScreen.classList.remove('hidden');
+        userNameSpan.textContent = user.displayName || 'User';
+        userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';
+        // Reset UI to initial state
+        openEbookBtn.classList.remove('hidden');
+        utrSection.classList.add('hidden');
+        pdfContainer.classList.add('hidden');
+        utrInput.value = '';
+        utrError.textContent = '';
+        setLoading(verifyUtrBtn, verifySpinner, verifyBtnText, false);
+      } else {
+        loginScreen.classList.remove('hidden');
+        dashboardScreen.classList.add('hidden');
+        loginError.textContent = '';
+      }
+    });
+
+    // Google Login
+    googleLoginBtn.addEventListener('click', async () => {
+      const provider = new GoogleAuthProvider();
+      try {
+        setLoading(googleLoginBtn, null, googleLoginBtn, true);
+        await signInWithPopup(auth, provider);
+      } catch (error) {
+        console.error(error);
+        loginError.textContent = error.message || 'Login failed.';
+        setLoading(googleLoginBtn, null, googleLoginBtn, false);
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async () => {
+      await signOut(auth);
+    });
+
+    // Show UTR section when "Open Ebook" is clicked
+    openEbookBtn.addEventListener('click', () => {
+      openEbookBtn.classList.add('hidden');
+      utrSection.classList.remove('hidden');
+    });
+
+    // UTR Verification & Get PDF
+    verifyUtrBtn.addEventListener('click', async () => {
+      const utr = utrInput.value.trim();
+      if (!utr) {
+        utrError.textContent = 'Please enter a UTR number.';
+        return;
+      }
+
+      setLoading(verifyUtrBtn, verifySpinner, verifyBtnText, true);
+      utrError.textContent = '';
+
+      try {
+        const getEbookUrl = httpsCallable(functions, 'getEbookUrl');
+        const result = await getEbookUrl({ utr });
+        const url = result.data.url;
+        pdfFrame.src = url;
+        pdfContainer.classList.remove('hidden');
+        // Optional: hide UTR section after success
+        utrSection.classList.add('hidden');
+      } catch (error) {
+        console.error(error);
+        let message = 'An unexpected error occurred.';
+        if (error.code === 'unauthenticated') {
+          message = 'You must be logged in.';
+        } else if (error.code === 'permission-denied') {
+          message = 'This UTR is not linked to your account.';
+        } else if (error.code === 'not-found') {
+          message = 'UTR not found.';
+        } else if (error.code === 'already-exists') {
+          message = 'This UTR has already been used.';
+        } else if (error.message) {
+          message = error.message;
+        }
+        utrError.textContent = message;
+      } finally {
+        setLoading(verifyUtrBtn, verifySpinner, verifyBtnText, false);
+      }
+    });
+  </script>
+</body>
+  </html>
