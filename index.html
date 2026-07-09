@@ -5,13 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ebook Portal</title>
   <style>
+    /* ---------- CSS unchanged ---------- */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
-
     body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
@@ -20,7 +20,6 @@
       align-items: center;
       padding: 20px;
     }
-
     .container {
       background: white;
       border-radius: 20px;
@@ -30,25 +29,9 @@
       padding: 40px 30px;
       text-align: center;
     }
-
-    h1 {
-      color: #333;
-      margin-bottom: 10px;
-      font-size: 28px;
-    }
-
-    h2 {
-      color: #555;
-      margin-bottom: 20px;
-      font-weight: 500;
-    }
-
-    .subtitle {
-      color: #777;
-      margin-bottom: 25px;
-      font-size: 14px;
-    }
-
+    h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+    h2 { color: #555; margin-bottom: 20px; font-weight: 500; }
+    .subtitle { color: #777; margin-bottom: 25px; font-size: 14px; }
     button {
       cursor: pointer;
       border: none;
@@ -60,11 +43,7 @@
       width: 100%;
       margin-bottom: 15px;
     }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
+    button:active { transform: scale(0.98); }
     .google-btn {
       background: #ffffff;
       border: 1px solid #dadce0;
@@ -74,35 +53,12 @@
       justify-content: center;
       gap: 10px;
     }
-
-    .google-btn:hover {
-      background: #f8f9fa;
-    }
-
-    .google-btn img {
-      width: 20px;
-      height: 20px;
-    }
-
-    .primary-btn {
-      background: #667eea;
-      color: white;
-    }
-
-    .primary-btn:hover {
-      background: #5a6fd6;
-    }
-
-    .logout-btn {
-      background: #e0e0e0;
-      color: #333;
-      margin-top: 20px;
-    }
-
-    .logout-btn:hover {
-      background: #bdbdbd;
-    }
-
+    .google-btn:hover { background: #f8f9fa; }
+    .google-btn img { width: 20px; height: 20px; }
+    .primary-btn { background: #667eea; color: white; }
+    .primary-btn:hover { background: #5a6fd6; }
+    .logout-btn { background: #e0e0e0; color: #333; margin-top: 20px; }
+    .logout-btn:hover { background: #bdbdbd; }
     input {
       width: 100%;
       padding: 12px;
@@ -113,22 +69,9 @@
       outline: none;
       transition: border 0.2s;
     }
-
-    input:focus {
-      border-color: #667eea;
-    }
-
-    .error-message {
-      color: #e74c3c;
-      margin: 10px 0;
-      font-size: 14px;
-      min-height: 20px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
-
+    input:focus { border-color: #667eea; }
+    .error-message { color: #e74c3c; margin: 10px 0; font-size: 14px; min-height: 20px; }
+    .hidden { display: none !important; }
     .loading-spinner {
       border: 3px solid #f3f3f3;
       border-top: 3px solid #667eea;
@@ -138,12 +81,10 @@
       animation: spin 0.8s linear infinite;
       margin: 10px auto;
     }
-
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-
     iframe {
       width: 100%;
       height: 500px;
@@ -152,7 +93,6 @@
       box-shadow: 0 5px 15px rgba(0,0,0,0.1);
       margin-top: 20px;
     }
-
     .user-info {
       display: flex;
       align-items: center;
@@ -160,17 +100,13 @@
       gap: 8px;
       margin-bottom: 20px;
     }
-
     .user-avatar {
       width: 40px;
       height: 40px;
       border-radius: 50%;
       object-fit: cover;
     }
-
-    .pdf-container {
-      margin-top: 20px;
-    }
+    .pdf-container { margin-top: 20px; }
   </style>
 </head>
 <body>
@@ -195,10 +131,10 @@
       <h2>Welcome!</h2>
       <p class="subtitle">Your purchased ebook is ready</p>
 
-      <!-- "Open Ebook" button (shown initially) -->
+      <!-- "Open Ebook" button -->
       <button class="primary-btn" id="open-ebook-btn">📖 Open Ebook</button>
 
-      <!-- UTR Section (hidden initially) -->
+      <!-- UTR Section (hidden) -->
       <div id="utr-section" class="hidden">
         <input type="text" id="utr-input" placeholder="Enter your UTR number">
         <div id="utr-error" class="error-message"></div>
@@ -265,16 +201,16 @@
     const pdfFrame = document.getElementById('pdf-frame');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Helper: Toggle loading state
+    // Helper: Toggle loading state (safe version)
     function setLoading(button, spinner, textElement, isLoading) {
       if (isLoading) {
         button.disabled = true;
-        textElement.classList.add('hidden');
-        spinner.classList.remove('hidden');
+        if (textElement) textElement.classList.add('hidden');
+        if (spinner) spinner.classList.remove('hidden');
       } else {
         button.disabled = false;
-        textElement.classList.remove('hidden');
-        spinner.classList.add('hidden');
+        if (textElement) textElement.classList.remove('hidden');
+        if (spinner) spinner.classList.add('hidden');
       }
     }
 
@@ -299,16 +235,19 @@
       }
     });
 
-    // Google Login
+    // Google Login (no spinner)
     googleLoginBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
       try {
-        setLoading(googleLoginBtn, null, googleLoginBtn, true);
+        googleLoginBtn.disabled = true;
+        googleLoginBtn.textContent = 'Signing in...';
         await signInWithPopup(auth, provider);
       } catch (error) {
         console.error(error);
         loginError.textContent = error.message || 'Login failed.';
-        setLoading(googleLoginBtn, null, googleLoginBtn, false);
+      } finally {
+        googleLoginBtn.disabled = false;
+        googleLoginBtn.innerHTML = `<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"> Sign in with Google`;
       }
     });
 
@@ -340,8 +279,7 @@
         const url = result.data.url;
         pdfFrame.src = url;
         pdfContainer.classList.remove('hidden');
-        // Optional: hide UTR section after success
-        utrSection.classList.add('hidden');
+        utrSection.classList.add('hidden'); // UTR section hide on success
       } catch (error) {
         console.error(error);
         let message = 'An unexpected error occurred.';
@@ -363,4 +301,4 @@
     });
   </script>
 </body>
-  </html>
+</html>
