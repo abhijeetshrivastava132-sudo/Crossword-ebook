@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ebook Portal</title>
   <style>
-    /* ---------- CSS unchanged ---------- */
     * {
       margin: 0;
       padding: 0;
@@ -76,10 +75,10 @@
       border: 3px solid #f3f3f3;
       border-top: 3px solid #667eea;
       border-radius: 50%;
-      width: 20px;
-      height: 20px;
+      width: 40px;
+      height: 40px;
       animation: spin 0.8s linear infinite;
-      margin: 10px auto;
+      margin: 20px auto;
     }
     @keyframes spin {
       0% { transform: rotate(0deg); }
@@ -107,13 +106,24 @@
       object-fit: cover;
     }
     .pdf-container { margin-top: 20px; }
+    .loading-screen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100px;
+    }
   </style>
 </head>
 <body>
   <div class="container" id="app">
-    <!-- Login Screen -->
-    <div id="login-screen">
-      <h1>📚 Ebook Portal</h1>
+    <!-- Loading screen (initial auth check) -->
+    <div id="loading-screen" class="loading-screen">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Login Screen (hidden by default) -->
+    <div id="login-screen" class="hidden">
+      <h1>Ebook Portal</h1>
       <p class="subtitle">Access your purchased ebooks securely</p>
       <button class="google-btn" id="google-login-btn">
         <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
@@ -131,20 +141,17 @@
       <h2>Welcome!</h2>
       <p class="subtitle">Your purchased ebook is ready</p>
 
-      <!-- "Open Ebook" button -->
-      <button class="primary-btn" id="open-ebook-btn">📖 Open Ebook</button>
+      <button class="primary-btn" id="open-ebook-btn">Open Ebook</button>
 
-      <!-- UTR Section (hidden) -->
       <div id="utr-section" class="hidden">
         <input type="text" id="utr-input" placeholder="Enter your UTR number">
         <div id="utr-error" class="error-message"></div>
         <button class="primary-btn" id="verify-utr-btn">
           <span id="verify-btn-text">Verify & Open</span>
-          <div id="verify-spinner" class="loading-spinner hidden"></div>
+          <div id="verify-spinner" class="loading-spinner hidden" style="width:20px; height:20px; margin:0 auto;"></div>
         </button>
       </div>
 
-      <!-- PDF Viewer (hidden) -->
       <div id="pdf-container" class="pdf-container hidden">
         <iframe id="pdf-frame"></iframe>
       </div>
@@ -153,7 +160,6 @@
     </div>
   </div>
 
-  <!-- Modular Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { 
@@ -161,29 +167,33 @@
       signInWithPopup, 
       GoogleAuthProvider, 
       onAuthStateChanged, 
-      signOut 
+      signOut,
+      browserLocalPersistence,
+      setPersistence
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js";
     import { 
       getFunctions, 
       httpsCallable 
     } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-functions.js";
 
-    // ================== YOUR FIREBASE CONFIG ==================
     const firebaseConfig = {
       apiKey: "AIzaSyBhiWCsuNxDfyDIE7wGJcEAimZMi2Hpd9g",
       authDomain: "ebook-df952.firebaseapp.com",
       projectId: "ebook-df952",
-      storageBucket: "ebook-df952.firebasestorage.app",
+      storageBucket: "ebook-df952.firebasestorage.app", // <-- Check this! Usually "ebook-df952.appspot.com"
       messagingSenderId: "165157965441",
       appId: "1:165157965441:web:5e2d9cdb7dfcdf70de8780"
     };
 
-    // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const functions = getFunctions(app);
 
+    // Ensure persistence is local (survives refresh)
+    setPersistence(auth, browserLocalPersistence).catch(console.error);
+
     // UI Elements
+    const loadingScreen = document.getElementById('loading-screen');
     const loginScreen = document.getElementById('login-screen');
     const dashboardScreen = document.getElementById('dashboard-screen');
     const googleLoginBtn = document.getElementById('google-login-btn');
@@ -201,7 +211,9 @@
     const pdfFrame = document.getElementById('pdf-frame');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Helper: Toggle loading state (safe version)
+    let authReady = false;
+
+    // Helper: safe loading toggle
     function setLoading(button, spinner, textElement, isLoading) {
       if (isLoading) {
         button.disabled = true;
@@ -216,12 +228,15 @@
 
     // Auth state observer
     onAuthStateChanged(auth, (user) => {
+      authReady = true;
+      loadingScreen.classList.add('hidden'); // hide loader once state is known
+
       if (user) {
         loginScreen.classList.add('hidden');
         dashboardScreen.classList.remove('hidden');
         userNameSpan.textContent = user.displayName || 'User';
         userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';
-        // Reset UI to initial state
+        // Reset dashboard
         openEbookBtn.classList.remove('hidden');
         utrSection.classList.add('hidden');
         pdfContainer.classList.add('hidden');
@@ -235,12 +250,23 @@
       }
     });
 
-    // Google Login (no spinner)
+    // Wait for auth to initialize before showing any screen
+    window.addEventListener('load', () => {
+      // If auth still not ready after 2 sec, show login anyway (fallback)
+      setTimeout(() => {
+        if (!authReady) {
+          loadingScreen.classList.add('hidden');
+          loginScreen.classList.remove('hidden');
+        }
+      }, 2000);
+    });
+
+    // Google Login
     googleLoginBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
       try {
         googleLoginBtn.disabled = true;
-        googleLoginBtn.textContent = 'Signing in...';
+        googleLoginBtn.innerHTML = 'Signing in...';
         await signInWithPopup(auth, provider);
       } catch (error) {
         console.error(error);
@@ -256,13 +282,13 @@
       await signOut(auth);
     });
 
-    // Show UTR section when "Open Ebook" is clicked
+    // Open Ebook click -> show UTR input
     openEbookBtn.addEventListener('click', () => {
       openEbookBtn.classList.add('hidden');
       utrSection.classList.remove('hidden');
     });
 
-    // UTR Verification & Get PDF
+    // UTR Verification
     verifyUtrBtn.addEventListener('click', async () => {
       const utr = utrInput.value.trim();
       if (!utr) {
@@ -277,24 +303,20 @@
         const getEbookUrl = httpsCallable(functions, 'getEbookUrl');
         const result = await getEbookUrl({ utr });
         const url = result.data.url;
+        if (!url) throw new Error('No URL returned from server.');
+
         pdfFrame.src = url;
         pdfContainer.classList.remove('hidden');
-        utrSection.classList.add('hidden'); // UTR section hide on success
+        utrSection.classList.add('hidden');
       } catch (error) {
         console.error(error);
-        let message = 'An unexpected error occurred.';
-        if (error.code === 'unauthenticated') {
-          message = 'You must be logged in.';
-        } else if (error.code === 'permission-denied') {
-          message = 'This UTR is not linked to your account.';
-        } else if (error.code === 'not-found') {
-          message = 'UTR not found.';
-        } else if (error.code === 'already-exists') {
-          message = 'This UTR has already been used.';
-        } else if (error.message) {
-          message = error.message;
-        }
+        let message = error.message || 'An unexpected error occurred.';
+        if (error.code === 'unauthenticated') message = 'You must be logged in.';
+        else if (error.code === 'permission-denied') message = 'This UTR is not linked to your account.';
+        else if (error.code === 'not-found') message = 'UTR not found.';
+        else if (error.code === 'already-exists') message = 'This UTR has already been used.';
         utrError.textContent = message;
+        pdfContainer.classList.add('hidden');
       } finally {
         setLoading(verifyUtrBtn, verifySpinner, verifyBtnText, false);
       }
