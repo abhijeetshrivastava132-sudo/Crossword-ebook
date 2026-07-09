@@ -149,7 +149,6 @@
     </div>
   </div>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js";
     import { 
@@ -180,8 +179,8 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ====== PDF file name (publicly hosted on same domain) ======
-    const PDF_FILE = "ebook-mysecret.pdf"; // Change to your actual PDF filename
+    // ====== IMPORTANT: Match with your uploaded PDF filename ======
+    const PDF_FILE = "Learn_Cryptic_crossword.pdf";
 
     // UI Elements
     const loginScreen = document.getElementById('login-screen');
@@ -201,17 +200,15 @@
     const pdfFrame = document.getElementById('pdf-frame');
     const logoutBtn = document.getElementById('logout-btn');
 
-    // Ensure login persists across refresh
     setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-    // Auth state
     onAuthStateChanged(auth, (user) => {
       if (user) {
         loginScreen.classList.add('hidden');
         dashboardScreen.classList.remove('hidden');
         userNameSpan.textContent = user.displayName || 'User';
         userAvatar.src = user.photoURL || 'https://via.placeholder.com/40';
-        // Reset UI
+        // Reset state
         openEbookBtn.classList.remove('hidden');
         utrSection.classList.add('hidden');
         pdfContainer.classList.add('hidden');
@@ -227,7 +224,6 @@
       }
     });
 
-    // Google Login
     googleLoginBtn.addEventListener('click', async () => {
       const provider = new GoogleAuthProvider();
       try {
@@ -243,16 +239,13 @@
       }
     });
 
-    // Logout
     logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // Open Ebook -> show UTR input
     openEbookBtn.addEventListener('click', () => {
       openEbookBtn.classList.add('hidden');
       utrSection.classList.remove('hidden');
     });
 
-    // Verify UTR using Firestore (secure)
     verifyUtrBtn.addEventListener('click', async () => {
       const utr = utrInput.value.trim();
       if (!utr) {
@@ -266,34 +259,33 @@
         return;
       }
 
-      // Show loading
       verifyUtrBtn.disabled = true;
       verifyBtnText.classList.add('hidden');
       verifySpinner.classList.remove('hidden');
       utrError.textContent = '';
 
       try {
-        // Try to read Firestore document: utrs/{UTR}
+        // Attempt to read UTR document from Firestore
         const docRef = doc(db, 'utrs', utr);
         const docSnap = await getDoc(docRef);
 
-        // If document exists and security rules allow read, we will get data
-        // If email doesn't match, Firestore will throw permission-denied automatically
+        // If document exists and rules allow, we get data. Else catch block handles.
         if (docSnap.exists()) {
-          // Access granted, show PDF
+          // Success
           pdfFrame.src = PDF_FILE;
           pdfContainer.classList.remove('hidden');
           utrSection.classList.add('hidden');
-          // Optional: you can update used flag by writing to Firestore if needed (but need write rules too)
         } else {
           utrError.textContent = 'Invalid UTR.';
         }
       } catch (error) {
         console.error(error);
+        // Show alert for debugging
+        alert('Firestore Error: ' + (error.message || error));
         if (error.code === 'permission-denied') {
           utrError.textContent = 'This UTR is not linked to your account.';
         } else {
-          utrError.textContent = 'An error occurred. Please try again.';
+          utrError.textContent = 'Error: ' + error.message;
         }
       } finally {
         verifyUtrBtn.disabled = false;
